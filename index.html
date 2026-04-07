@@ -26,6 +26,7 @@
     /* Carousel styles */
     .carousel-track { display: flex; transition: transform 0.5s ease-in-out; }
     .app-card-overlay { background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%); opacity: 0; transition: opacity 0.3s ease; }
+    .app-card:hover .app-card-tag-badge { opacity: 0; }
     .app-card:hover .app-card-overlay { opacity: 1; }
     .app-card .app-card-main-title { transition: opacity 0.3s ease; }
     .app-card:hover .app-card-main-title { opacity: 0; }
@@ -92,7 +93,7 @@
         <h1 class="font-bold text-2xl text-[#111213]" id="pageTitle" contenteditable="false">Advanced Features</h1>
         <div class="bg-white border border-[#dfe3e8] rounded-lg px-4 py-2 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
           <p id="topBannerText" class="text-[#6d7175] text-[12px] max-w-4xl leading-relaxed" contenteditable="false">
-            Unlock more merchandising control, richer filter experiences, and higher store limits. Every upgrade below is designed to make your storefront feel faster, smarter, and more premium.
+            Unlock advanced merchandising tools, richer filtering experiences, and higher store limits. Every feature below is built to make your storefront faster, smarter, and significantly more premium.
           </p>
           <button class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#dfe3e8] bg-white text-[10px] font-bold text-[#303030] hover:bg-gray-50 shadow-sm transition-all uppercase tracking-wider">
             <span class="w-1.5 h-1.5 rounded-full bg-[#008060]"></span>
@@ -157,12 +158,12 @@
     const STORAGE_KEY = 'findter_features_v5';
     
     const defaultFeatures = [
-      { id: 1, title: 'Unlock Metafield', desc: 'Create custom metafield data like material, compatibility, and other product details usable as filter options on your storefront.', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/jTAdnH5MtdVAJHLv4N/giphy.gif' },
+      { id: 1, title: 'Filter by Metafields', desc: 'Create custom metafields as filter options. Start with 10 metafields included. Need additional metafields? Contact us for upgrade', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/jTAdnH5MtdVAJHLv4N/giphy.gif' },
       { id: 2, title: 'Boost In-Stock Products', desc: 'When shoppers choose a variant filter, products with matching in-stock variants appear first in the storefront results.', status: 'Locked', gif: 'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExcmNnNGhiYzFna2d3bmhhdzVhc3M4cHRuYWRhYmd6OXhjeDM2NDRmdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XkyxgzbM5rxYY/giphy.gif' },
-      { id: 3, title: 'Hide Out-of-Stock Products', desc: 'After shoppers choose a filter value, products that are out of stock for that selected value are hidden from the results.', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PATFfc1VF9mtlbzZfL/giphy.gif' },
-      { id: 4, title: 'Local Market Currency', desc: 'Show product and filter prices in the shopper\'s local currency instead of only the default currency set in your store.', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iDzgyb5736rjvdGdFb/giphy.gif' },
-      { id: 5, title: 'Image Swatches', desc: 'Replace standard swatches with image swatches so shoppers can choose variants more easily by what they see.', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3o7TKMGpxvF7657904/giphy.gif' },
-      { id: 6, title: 'Multi Filter Source', desc: 'Reuse a single source, such as Tags, Type, Category or Vendor, across multiple filter options on your storefront.', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHJleW1pOHZ1MTR1ZHJkNjVnNmpnbnZhcWlneWxsaHVpNXpwNnc4ZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26uf7O0I7YmYgN528/giphy.gif' }
+      { id: 3, title: 'Hide Out-of-Stock Products', desc: 'Out-of-stock items matching that selected value are hidden from the filter results', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/PATFfc1VF9mtlbzZfL/giphy.gif' },
+      { id: 4, title: 'Local Currency Adaption', desc: 'Show product and filter prices in the shopper\'s local currency instead of only the default currency set in your store.', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iDzgyb5736rjvdGdFb/giphy.gif' },
+      { id: 5, title: 'Image Swatches Filter', desc: 'Display product images instead of plain color or text swatches. Let shoppers preview and select different patterns, designs, or styles visually for a better shopping experience.', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3o7TKMGpxvF7657904/giphy.gif' },
+      { id: 6, title: 'Multi-Filters by One Source', desc: 'Reuse a single source, such as Tags, Type, Category or Vendor, etc... multiple times in one filter set (based on your needs)', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHJleW1pOHZ1MTR1ZHJkNjVnNmpnbnZhcWlneWxsaHVpNXpwNnc4ZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26uf7O0I7YmYgN528/giphy.gif' }
     ];
 
     const recommendedApps = [
