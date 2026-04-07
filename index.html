@@ -42,6 +42,9 @@
     .group:hover .expand-badge { opacity: 1; transform: translate(-50%, -50%); }
     .tooltip-box { display: none; opacity: 0; transition: opacity 0.2s ease; position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%); width: 240px; z-index: 100; pointer-events: none; }
     .group\/tooltip:hover .tooltip-box { display: block; opacity: 1; pointer-events: auto; }
+    .editing .tooltip-box.active { display: block !important; opacity: 1 !important; pointer-events: auto !important; }
+    .editing .group\/tooltip:hover .tooltip-box { display: none; }
+    .editing .group\/tooltip .tooltip-box.active { display: block; }
   </style>
 </head>
 <body class="min-h-screen flex">
@@ -266,7 +269,8 @@
             <div class="flex items-center gap-2 mb-2">
               <h3 class="font-bold text-sm text-[#111213] truncate" contenteditable="${isEditing}" onblur="updateField(${index}, 'title', this.innerText)">${f.title}</h3>
               <div class="relative group/tooltip inline-block">
-                <i class="far fa-question-circle text-[#6d7175] text-xs cursor-help p-1 transition-colors hover:text-[#008060]"></i>
+                <i class="far fa-question-circle text-[#6d7175] text-xs cursor-help p-1 transition-colors hover:text-[#008060]" 
+                   onclick="${isEditing ? `toggleTooltip(this)` : ''}"></i>
                 <div class="tooltip-box bg-[#111213] text-white text-[11px] p-4 rounded-xl shadow-2xl leading-relaxed border border-white/10">
                   <div contenteditable="${isEditing}" onblur="updateField(${index}, 'desc', this.innerText)">${f.desc}</div>
                   <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#111213] rotate-45"></div>
@@ -400,6 +404,14 @@
       modalHeader.textContent = title;
       previewModal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
+    }
+
+    function toggleTooltip(el) {
+      if (!isEditing) return;
+      const box = el.nextElementSibling;
+      const isActive = box.classList.contains('active');
+      document.querySelectorAll('.tooltip-box').forEach(b => b.classList.remove('active'));
+      if (!isActive) box.classList.add('active');
     }
 
     function closeModal() {
