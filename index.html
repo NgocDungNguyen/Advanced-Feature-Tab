@@ -250,7 +250,7 @@
           <div class="relative h-3/4 bg-[#f8f9fa] ${isEditing ? 'cursor-default' : 'cursor-zoom-in'} overflow-hidden rounded-t-2xl"
                onmouseenter="showPreview(this, '${f.gif}')"
                onmouseleave="hidePreview(this, '${staticImg}')"
-               onclick="${isEditing ? '' : `openModal('${f.gif}', '${f.title}')`}">
+               onclick="${isEditing ? '' : `openModal('${f.gif}', '${f.title}', '${f.status}')`}">
             
             ${!isEditing ? `
             <div class="expand-badge absolute top-1/2 left-1/2 z-30 bg-white/95 backdrop-blur-sm border border-[#dfe3e8] px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2 text-xs font-bold text-[#111213] whitespace-nowrap">
@@ -419,9 +419,16 @@
       renderGrid();
     }
 
-    function openModal(gif, title) {
+    function openModal(gif, title, status) {
       modalImg.src = gif;
-      modalHeader.textContent = title;
+      modalHeader.innerHTML = `
+        <div class="flex items-center gap-3">
+          <span>${title}</span>
+          <span class="px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${status.toLowerCase() === 'enabled' ? 'bg-[#e3f1df] text-[#0c5132] border-[#b7e0cf]' : 'bg-[#fbeae5] text-[#8a2c0d] border-[#f1b8b8]'}">
+            ${status}
+          </span>
+        </div>
+      `;
       previewModal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     }
