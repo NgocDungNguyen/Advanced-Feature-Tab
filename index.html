@@ -46,9 +46,41 @@
     .editing .tooltip-box.active { display: block !important; opacity: 1 !important; pointer-events: auto !important; }
     .editing .group\/tooltip:hover .tooltip-box { display: none; }
     .editing .group\/tooltip .tooltip-box.active { display: block; }
+    
+    /* Chatbox Styling */
+    #chat-widget { position: fixed; bottom: 24px; right: 24px; z-index: 200; font-family: 'Inter', sans-serif; }
+    #chat-bubble { width: 56px; height: 56px; border-radius: 50%; background: #008060; color: white; display: flex; items-center: center; justify-content: center; cursor: pointer; shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s; }
+    #chat-bubble:hover { transform: scale(1.1); }
+    #chat-window { width: 320px; height: 400px; background: white; border-radius: 16px; shadow: 0 12px 40px rgba(0,0,0,0.15); border: 1px solid #e1e3e5; display: none; flex-direction: column; overflow: hidden; }
+    #chat-window.active { display: flex; }
+    .chat-header { background: #008060; color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+    #chat-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+    .message { padding: 8px 12px; border-radius: 12px; font-size: 13px; max-width: 85%; }
+    .message-received { background: #f1f2f3; align-self: flex-start; color: #202223; }
+    .message-sent { background: #008060; align-self: flex-end; color: white; }
   </style>
 </head>
 <body class="min-h-screen flex">
+
+  <!-- Chat Widget -->
+  <div id="chat-widget">
+    <div id="chat-window">
+      <div class="chat-header">
+        <span>Support Chat</span>
+        <button onclick="toggleChat()"><i class="fas fa-times"></i></button>
+      </div>
+      <div id="chat-messages">
+        <div class="message message-received">Hi! How can we help you today?</div>
+      </div>
+      <div class="p-3 border-t bg-gray-50 flex gap-2">
+        <input type="text" placeholder="Type a message..." class="flex-1 border rounded-lg px-3 py-2 text-sm outline-none">
+        <button class="text-[#008060]"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div>
+    <div id="chat-bubble" class="mt-3 flex items-center justify-center shadow-lg" onclick="toggleChat()">
+      <i class="fas fa-comment-alt text-xl"></i>
+    </div>
+  </div>
 
   <aside class="hidden lg:flex w-64 shrink-0 bg-[#f1f2f3] border-r border-[#e1e3e5] flex-col">
     <div class="h-14 border-b border-[#e1e3e5] flex items-center px-5 font-semibold text-[#111213]">
@@ -95,7 +127,7 @@
           <p id="topBannerText" class="text-[#6d7175] text-[12px] max-w-4xl leading-relaxed" contenteditable="false">
             Unlock advanced merchandising tools, richer filtering experiences, and higher store limits. Every feature below is built to make your storefront faster, smarter, and significantly more premium.
           </p>
-          <button class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#dfe3e8] bg-white text-[10px] font-bold text-[#303030] hover:bg-gray-50 shadow-sm transition-all uppercase tracking-wider">
+          <button onclick="openChatWith('Hi, I need help with Advanced Features')" class="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#dfe3e8] bg-white text-[10px] font-bold text-[#303030] hover:bg-gray-50 shadow-sm transition-all uppercase tracking-wider">
             <span class="w-1.5 h-1.5 rounded-full bg-[#008060]"></span>
             Contact us to enable
           </button>
@@ -107,7 +139,7 @@
         
         <div class="mt-8 text-center">
           <p id="featureRequestText" class="text-sm text-[#6d7175]" contenteditable="false">
-            Cannot find what you need here? <a href="#" class="text-blue-600 font-semibold hover:underline cursor-pointer">Contact us now</a> to request a custom feature.
+            Cannot find what you need here? <a href="javascript:void(0)" onclick="openChatWith('Hi, I have a custom feature request')" class="text-blue-600 font-semibold hover:underline cursor-pointer">Contact us now</a> to request a custom feature.
           </p>
         </div>
 
@@ -223,6 +255,24 @@
       renderGrid();
     };
 
+    function toggleChat() {
+      const win = document.getElementById('chat-window');
+      win.classList.toggle('active');
+    }
+
+    function openChatWith(message) {
+      if (isEditing) return;
+      const win = document.getElementById('chat-window');
+      const messages = document.getElementById('chat-messages');
+      win.classList.add('active');
+      
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message message-sent';
+      msgDiv.textContent = message;
+      messages.appendChild(msgDiv);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
     function renderGrid() {
       grid.innerHTML = '';
       const scaleFactor = currentScale / 100;
@@ -245,6 +295,22 @@
         // or just use a container with background-repeat: no-repeat and avoid playing. 
         // For standard Giphy links, appending _s to the filename often gives the static version.
         const staticImg = f.gif.replace('.gif', '_s.gif');
+
+        const isLocked = f.status.toLowerCase() === 'locked';
+        let chatMsg = "";
+        if (isLocked) {
+          const map = {
+            'Filter by Metafields': 'Hi, I need help with unlocking Metafield.',
+            'Boost In-Stock Products': 'Hi, I need help enabling Boost In-Stock Products',
+            'Hide Out-of-Stock Products': 'Hi, I need help enabling Hide Out-of-Stock Products.',
+            'Local Currency Adaption': 'Hi, I need help enabling Local Currency Adaption.',
+            'Image Swatches Filter': 'Hi, I need help enabling Image Swatches Filter.',
+            'Multi-Filters by One Source': 'Hi, I need help enabling Multi-Filter Source.'
+          };
+          chatMsg = map[f.title] || `Hi, I need help with unlocking ${f.title}`;
+        } else {
+          chatMsg = `Hi, I need help with ${f.title}`;
+        }
 
         card.innerHTML = `
           <div class="relative h-3/4 bg-[#f8f9fa] ${isEditing ? 'cursor-default' : 'cursor-zoom-in'} overflow-hidden rounded-t-2xl"
@@ -291,7 +357,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-              <button class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">
+              <button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">
                 ${contactText}
               </button>
               ${isEditing ? `
