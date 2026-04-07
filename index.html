@@ -300,14 +300,14 @@
         let chatMsg = "";
         if (isLocked) {
           const map = {
-            'Filter by Metafields': 'Hi, I need help with unlocking Metafield.',
-            'Boost In-Stock Products': 'Hi, I need help enabling Boost In-Stock Products',
-            'Hide Out-of-Stock Products': 'Hi, I need help enabling Hide Out-of-Stock Products.',
-            'Local Currency Adaption': 'Hi, I need help enabling Local Currency Adaption.',
-            'Image Swatches Filter': 'Hi, I need help enabling Image Swatches Filter.',
-            'Multi-Filters by One Source': 'Hi, I need help enabling Multi-Filter Source.'
+            'Filter by Metafields': 'Hi, I want to unlock Filter by Metafield.',
+            'Boost In-Stock Products': 'Hi, I want to enable Boost In-Stock Products',
+            'Hide Out-of-Stock Products': 'Hi, I want to enable Hide Out-of-Stock Products.',
+            'Local Currency Adaption': 'Hi, I want to enable Local Currency Adaption.',
+            'Image Swatches Filter': 'Hi, I want to enable Image Swatches Filter.',
+            'Multi-Filters by One Source': 'Hi, I want to enable Multi-Filter Source.'
           };
-          chatMsg = map[f.title] || `Hi, I need help with unlocking ${f.title}`;
+          chatMsg = map[f.title] || `Hi, I want to unlock ${f.title}`;
         } else {
           chatMsg = `Hi, I need help with ${f.title}`;
         }
