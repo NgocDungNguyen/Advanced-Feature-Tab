@@ -392,6 +392,8 @@
     let currentTab = 'advanced'; // advanced | master
     let editorTargetId = null;
     let buyTargetId = null;
+    let pendingActivation = new Set();
+    let toggleCounts = {};
 
     const grid = document.getElementById('featureGrid');
     const scaleInput = document.getElementById('scaleInput');
@@ -492,6 +494,58 @@
       renderGrid();
     }
 
+    function sendBotMessage(text) {
+      const messages = document.getElementById('chat-messages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message message-received';
+      msgDiv.textContent = text;
+      messages.appendChild(msgDiv);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function activateFeature(id) {
+      if (pendingActivation.has(String(id))) return;
+      const f = findById(id);
+      if (!f) return;
+      pendingActivation.add(String(id));
+      renderGrid();
+      document.getElementById('chat-window').classList.add('active');
+      sendBotMessage(`Hi there! 👋 I'd be happy to enable ${f.title} for you.`);
+      setTimeout(() => {
+        sendBotMessage(`Please give me a moment while I activate this feature on your account... ⏳`);
+        setTimeout(() => {
+          sendBotMessage(`Great news! ✅ ${f.title} has been successfully enabled!`);
+          setTimeout(() => {
+            sendBotMessage(`You can now use this feature immediately. Feel free to toggle it on/off anytime using the switch in the card. Enjoy! 🎉`);
+            setTimeout(() => {
+              pendingActivation.delete(String(id));
+              f.status = 'Enabled';
+              purchased[String(id)] = true;
+              persistFeatures();
+              persistPurchased();
+              renderGrid();
+            }, 3000);
+          }, 1000);
+        }, 4000);
+      }, 1000);
+    }
+
+    function handleFeatureToggle(id) {
+      const f = findById(id);
+      if (!f) return;
+      f.status = f.status.toLowerCase() === 'enabled' ? 'Locked' : 'Enabled';
+      persistFeatures();
+      toggleCounts[id] = (toggleCounts[id] || 0) + 1;
+      if (toggleCounts[id] >= 3) {
+        toggleCounts[id] = 0;
+        setTimeout(() => {
+          document.getElementById('chat-window').classList.add('active');
+          sendBotMessage(`Hey! Looks like you've been toggling ${f.title} a few times — need a hand? I'm happy to help you get the most out of it 😊`);
+        }, 400);
+      }
+      renderGrid();
+    }
+
     view3Btn.onclick = () => {
       currentView = 3;
       view3Btn.classList.add('active');
@@ -528,101 +582,117 @@
     }
 
     function buildCardHtml(f, index, opts) {
-      const isPaidType = f.type === 'paid';
       const isPaidMode = currentMode === 'paid';
+      const isPaidType = f.type === 'paid';
       const isEnabled = f.status.toLowerCase() === 'enabled' || f.status.toLowerCase() === 'live';
       const isBought = !!purchased[f.id];
-
-      // Determine render style:
-      //  - paid-type card => "premium" style (Buy → Enable/Disable + Contact Us) in both modes
-      //  - free-type card + paid mode => Enable/Disable + Contact Us + Available badge + Live/Offline
-      //  - free-type card + free mode => Contact Us only + Locked/Enabled label
-      const stylePremium = isPaidType;
-      const styleSplit = !isPaidType && isPaidMode;
-      // stylePlain = !stylePremium && !styleSplit
-
-      // Status badge
-      let displayStatus, badgeColor;
-      if (stylePremium || styleSplit) {
-        displayStatus = isEnabled ? 'Live' : 'Offline';
-        badgeColor = isEnabled
-          ? 'bg-[#e3f1df] text-[#0c5132] border-[#b7e0cf]'
-          : 'bg-[#f1f2f3] text-[#6d7175] border-[#dfe3e8]';
-      } else {
-        displayStatus = f.status;
-        badgeColor = !isEnabled
-          ? 'bg-[#fbeae5] text-[#8a2c0d] border-[#f1b8b8]'
-          : 'bg-[#e3f1df] text-[#0c5132] border-[#b7e0cf]';
-      }
+      const isActivated = isPaidMode && isBought;
+      const isPending = isPaidMode && pendingActivation.has(String(f.id));
 
       const thumb = f.thumbnail || f.gif;
       const media = f.media || f.gif;
       const staticImg = thumb.replace('.gif', '_s.gif');
 
-      // Chat message
-      let chatMsg;
-      if (stylePremium || styleSplit) {
-        chatMsg = `Hi, I need help with ${f.title}`;
-      } else {
-        const isLocked = f.status.toLowerCase() === 'locked';
-        chatMsg = isLocked ? `Hi, I want to unlock ${f.title}` : `Hi, I need help with ${f.title}`;
-      }
-
-      // Title row
-      const priceHtml = stylePremium && f.cost
-        ? `<span class="text-[#008060] font-bold text-sm whitespace-nowrap">$${f.cost}/mo</span>`
-        : '';
-      const titleRow = `
-        <div class="flex items-center gap-2 mb-2 w-full">
-          <h3 class="font-bold text-sm text-[#111213] truncate flex-1" contenteditable="${isEditing}" onblur="updateField(${index}, 'title', this.innerText)">${f.title}</h3>
-          <div class="relative group/tooltip inline-block">
-            <i class="far fa-question-circle text-[#6d7175] text-xs cursor-help p-1 transition-colors hover:text-[#008060]"
-               onclick="${isEditing ? 'toggleTooltip(this)' : ''}"></i>
-            <div class="tooltip-box bg-[#111213] text-white text-[11px] p-4 rounded-xl shadow-2xl leading-relaxed border border-white/10">
-              <div contenteditable="${isEditing}" onblur="updateField(${index}, 'desc', this.innerText)">${f.desc}</div>
-              <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#111213] rotate-45"></div>
+      // ── Title row ──
+      let titleRow;
+      if (isActivated) {
+        titleRow = `
+          <div class="flex items-center gap-2 mb-2 w-full">
+            <h3 class="font-bold text-sm text-[#111213] truncate flex-1" contenteditable="${isEditing}" onblur="updateField(${index}, 'title', this.innerText)">${f.title}</h3>
+            <div class="relative group/tooltip inline-block shrink-0">
+              <i class="far fa-question-circle text-[#6d7175] text-xs cursor-help p-1 transition-colors hover:text-[#008060]"
+                 onclick="${isEditing ? 'toggleTooltip(this)' : ''}"></i>
+              <div class="tooltip-box bg-[#111213] text-white text-[11px] p-4 rounded-xl shadow-2xl leading-relaxed border border-white/10">
+                <div contenteditable="${isEditing}" onblur="updateField(${index}, 'desc', this.innerText)">${f.desc}</div>
+                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#111213] rotate-45"></div>
+              </div>
             </div>
-          </div>
-          ${priceHtml}
-        </div>`;
-
-      // Buttons
-      let buttonsRow;
-      if (stylePremium && !isBought) {
-        buttonsRow = `
-          <button onclick="openBuyModal('${f.id}')" class="flex-1 h-8 rounded-lg bg-[#008060] text-white text-[10px] font-bold px-2 hover:bg-[#006e52] transition-all">Buy</button>
-          <button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">Contact Us</button>
-        `;
-      } else if (stylePremium || styleSplit) {
-        const toggleFn = stylePremium ? `togglePaidStatus('${f.id}')` : `toggleCardStatus(${index})`;
-        const enableLabel = isEnabled ? 'Disable' : 'Enable';
-        const enableBg = isEnabled ? 'bg-[#6d7175] hover:bg-[#4a4d50]' : 'bg-[#008060] hover:bg-[#006e52]';
-        buttonsRow = `
-          <button onclick="${toggleFn}" class="flex-1 h-8 rounded-lg ${enableBg} text-white text-[10px] font-bold px-2 transition-all">${enableLabel}</button>
-          <button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">Contact Us</button>
-        `;
+            <label class="switch shrink-0" onclick="event.stopPropagation()">
+              <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="handleFeatureToggle('${f.id}')">
+              <span class="slider"></span>
+            </label>
+          </div>`;
       } else {
-        const contactText = isEnabled ? 'Still Need Assistant? Contact Us' : 'Contact Us';
-        buttonsRow = `<button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">${contactText}</button>`;
-      }
-      if (isEditing) {
-        buttonsRow += `<button onclick="removeCard(${index}); event.stopPropagation();" class="w-8 h-8 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>`;
+        const priceHtml = !isPaidMode && isPaidType && f.cost
+          ? `<span class="text-[#008060] font-bold text-sm whitespace-nowrap">$${f.cost}/mo</span>`
+          : '';
+        titleRow = `
+          <div class="flex items-center gap-2 mb-2 w-full">
+            <h3 class="font-bold text-sm text-[#111213] truncate flex-1" contenteditable="${isEditing}" onblur="updateField(${index}, 'title', this.innerText)">${f.title}</h3>
+            <div class="relative group/tooltip inline-block shrink-0">
+              <i class="far fa-question-circle text-[#6d7175] text-xs cursor-help p-1 transition-colors hover:text-[#008060]"
+                 onclick="${isEditing ? 'toggleTooltip(this)' : ''}"></i>
+              <div class="tooltip-box bg-[#111213] text-white text-[11px] p-4 rounded-xl shadow-2xl leading-relaxed border border-white/10">
+                <div contenteditable="${isEditing}" onblur="updateField(${index}, 'desc', this.innerText)">${f.desc}</div>
+                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#111213] rotate-45"></div>
+              </div>
+            </div>
+            ${priceHtml}
+          </div>`;
       }
 
-      const availableBadge = isPaidMode
+      // ── Buttons row ──
+      let buttonsRow = '';
+      if (isPaidMode) {
+        if (!isActivated) {
+          if (isPending) {
+            buttonsRow = `
+              <button disabled class="flex-1 h-8 rounded-lg bg-[#008060]/60 text-white text-[10px] font-bold px-2 cursor-not-allowed flex items-center justify-center gap-1.5">
+                <svg class="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                Enabling...
+              </button>`;
+          } else {
+            buttonsRow = `<button onclick="activateFeature('${f.id}')" class="flex-1 h-8 rounded-lg bg-[#008060] text-white text-[10px] font-bold px-2 hover:bg-[#006e52] transition-all">Click to Enable</button>`;
+          }
+        }
+      } else {
+        // Free mode: original logic
+        const stylePremium = isPaidType;
+        const chatMsg = stylePremium
+          ? `Hi, I need help with ${f.title}`
+          : (isEnabled ? `Hi, I need help with ${f.title}` : `Hi, I want to unlock ${f.title}`);
+
+        if (stylePremium && !isBought) {
+          buttonsRow = `
+            <button onclick="openBuyModal('${f.id}')" class="flex-1 h-8 rounded-lg bg-[#008060] text-white text-[10px] font-bold px-2 hover:bg-[#006e52] transition-all">Buy</button>
+            <button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">Contact Us</button>
+          `;
+        } else if (stylePremium) {
+          const enableLabel = isEnabled ? 'Disable' : 'Enable';
+          const enableBg = isEnabled ? 'bg-[#6d7175] hover:bg-[#4a4d50]' : 'bg-[#008060] hover:bg-[#006e52]';
+          buttonsRow = `
+            <button onclick="togglePaidStatus('${f.id}')" class="flex-1 h-8 rounded-lg ${enableBg} text-white text-[10px] font-bold px-2 transition-all">${enableLabel}</button>
+            <button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">Contact Us</button>
+          `;
+        } else {
+          const contactText = isEnabled ? 'Still Need Help? Contact Us' : 'Contact Us';
+          buttonsRow = `<button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">${contactText}</button>`;
+        }
+        if (isEditing) {
+          buttonsRow += `<button onclick="removeCard(${index}); event.stopPropagation();" class="w-8 h-8 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>`;
+        }
+      }
+
+      // Available badge: paid mode, not yet activated
+      const availableBadge = (isPaidMode && !isActivated)
         ? `<div class="absolute top-4 left-4 z-40 available-badge">Available</div>`
         : '';
 
-      const statusBadge = (stylePremium && !isBought)
-        ? ''
-        : `<div class="absolute top-4 right-4 z-40 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${badgeColor}"
-                onclick="event.stopPropagation()">${displayStatus}</div>`;
+      // Status badge: free mode, free-type cards only (Locked / Enabled)
+      let statusBadge = '';
+      if (!isPaidMode && !isPaidType) {
+        const badgeColor = !isEnabled
+          ? 'bg-[#fbeae5] text-[#8a2c0d] border-[#f1b8b8]'
+          : 'bg-[#e3f1df] text-[#0c5132] border-[#b7e0cf]';
+        statusBadge = `<div class="absolute top-4 right-4 z-40 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${badgeColor}" onclick="event.stopPropagation()">${f.status}</div>`;
+      }
 
+      const statusLabel = isEnabled ? 'Enabled' : 'Locked';
       return `
         <div class="relative h-3/4 bg-[#f8f9fa] ${isEditing ? 'cursor-default' : 'cursor-zoom-in'} overflow-hidden rounded-t-2xl"
              onmouseenter="showPreview(this, '${media}')"
              onmouseleave="hidePreview(this, '${staticImg}')"
-             onclick="${isEditing ? '' : `openModal('${media}', '${f.title}', '${displayStatus}')`}">
+             onclick="${isEditing ? '' : `openModal('${media}', '${f.title}', '${statusLabel}')`}">
           ${!isEditing ? `
           <div class="expand-badge absolute top-1/2 left-1/2 z-30 bg-white/95 backdrop-blur-sm border border-[#dfe3e8] px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2 text-xs font-bold text-[#111213] whitespace-nowrap">
             <i class="fas fa-expand-alt text-sm"></i><span>Click to Expand</span>
@@ -638,7 +708,7 @@
         </div>
         <div class="h-1/4 p-4 relative flex flex-col justify-center bg-white rounded-b-2xl border-t border-[#f1f2f3]">
           ${titleRow}
-          <div class="flex items-center gap-2">${buttonsRow}</div>
+          ${buttonsRow ? `<div class="flex items-center gap-2">${buttonsRow}</div>` : ''}
         </div>
       `;
     }
