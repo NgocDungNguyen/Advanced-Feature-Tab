@@ -544,6 +544,14 @@
               persistFeatures();
               persistActivated();
               renderGrid();
+              const expDate = purchaseDates[String(id)]
+                ? new Date(purchaseDates[String(id)] + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                : null;
+              if (expDate) {
+                setTimeout(() => {
+                  sendBotMessage(`📅 Your ${f.title} subscription is active until ${expDate}. Remember to renew before that date to keep enjoying our feature!`);
+                }, 800);
+              }
             }, 3000);
           }, 1000);
         }, 4000);
@@ -741,7 +749,7 @@
         </div>
         <div class="h-1/4 p-4 relative flex flex-col justify-center bg-white rounded-b-2xl border-t border-[#f1f2f3]">
           ${titleRow}
-          ${paidActivatedExpiry ? `<div class="text-center text-[10px] text-[#6d7175] -mt-1 mb-1">Expires: ${paidActivatedExpiry}</div>` : ''}
+          ${paidActivatedExpiry ? `<div class="text-center text-[10px] text-[#6d7175] mt-auto">Expires: ${paidActivatedExpiry}</div>` : ''}
           ${buttonsRow ? `<div class="flex items-center gap-2">${buttonsRow}</div>` : ''}
         </div>
       `;
