@@ -93,8 +93,8 @@
         <div class="message message-received">Hi! How can we help you today?</div>
       </div>
       <div class="p-3 border-t bg-gray-50 flex gap-2">
-        <input type="text" placeholder="Type a message..." class="flex-1 border rounded-lg px-3 py-2 text-sm outline-none">
-        <button class="text-[#008060]"><i class="fas fa-paper-plane"></i></button>
+        <input id="chat-input" type="text" placeholder="Type a message..." class="flex-1 border rounded-lg px-3 py-2 text-sm outline-none" onkeydown="if(event.key==='Enter'){handleChatSubmit();event.preventDefault();}">
+        <button class="text-[#008060]" onclick="handleChatSubmit()"><i class="fas fa-paper-plane"></i></button>
       </div>
     </div>
     <div id="chat-bubble" class="mt-3 flex items-center justify-center shadow-lg" onclick="toggleChat()">
@@ -122,13 +122,6 @@
 
   <main class="flex-1 flex flex-col h-screen overflow-hidden">
     <header class="h-14 bg-white border-b border-[#e1e3e5] flex items-center px-6 justify-end shrink-0 gap-4">
-      <div id="planWrap" class="flex items-center gap-2 border-r border-gray-200 pr-4">
-        <label class="text-[10px] uppercase font-bold text-gray-400">Plan:</label>
-        <div class="flex bg-[#f1f2f3] p-1 rounded-lg border border-[#dfe3e8]">
-          <button id="freeModeBtn" class="mode-toggle-btn active px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all">Free</button>
-          <button id="paidModeBtn" class="mode-toggle-btn px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all">Paid</button>
-        </div>
-      </div>
       <div id="viewWrap" class="flex items-center gap-2 border-r border-gray-200 pr-4">
         <label class="text-[10px] uppercase font-bold text-gray-400">View Mode:</label>
         <div class="flex bg-[#f1f2f3] p-1 rounded-lg border border-[#dfe3e8]">
@@ -239,22 +232,30 @@
     </div>
   </main>
 
-  <!-- Buy Modal -->
+  <!-- Subscribe Modal -->
   <div id="buyModal" class="fixed inset-0 z-[110] hidden items-center justify-center p-4 buy-modal-backdrop">
     <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
       <button onclick="closeBuyModal()" class="absolute top-3 right-3 close-modal-btn"><i class="fas fa-times"></i></button>
-      <h3 id="buyTitle" class="text-xl font-bold mb-2 text-[#111213]">Purchase</h3>
+      <h3 id="buyTitle" class="text-xl font-bold mb-2 text-[#111213]">Subscribe</h3>
       <p class="text-sm text-[#6d7175] mb-4">Unlock this premium feature for your store.</p>
       <div class="bg-[#f6f6f7] rounded-lg p-4 mb-4 flex justify-between items-center">
         <span id="buyName" class="text-sm font-semibold"></span>
         <span id="buyPrice" class="text-lg font-bold text-[#008060]"></span>
       </div>
-      <input type="text" placeholder="Card number" class="w-full border rounded-lg px-3 py-2 text-sm mb-2 outline-none focus:border-[#008060]">
-      <div class="flex gap-2 mb-4">
-        <input type="text" placeholder="MM/YY" class="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#008060]">
-        <input type="text" placeholder="CVC" class="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:border-[#008060]">
+      <button id="buyConfirmBtn" onclick="confirmBuy()" class="w-full h-11 bg-[#008060] text-white rounded-lg font-bold text-sm hover:bg-[#006e52] transition-colors">Proceed to Payment</button>
+    </div>
+  </div>
+
+  <!-- Unsubscribe Modal -->
+  <div id="unsubModal" class="fixed inset-0 z-[110] hidden items-center justify-center p-4 buy-modal-backdrop">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+      <button onclick="closeUnsubModal()" class="absolute top-3 right-3 close-modal-btn"><i class="fas fa-times"></i></button>
+      <h3 class="text-xl font-bold mb-2 text-[#111213]">Unsubscribe</h3>
+      <p id="unsubBody" class="text-sm text-[#6d7175] mb-4">Are you sure you want to unsubscribe from this feature?</p>
+      <div class="flex gap-2">
+        <button onclick="closeUnsubModal()" class="flex-1 h-11 rounded-lg border border-[#dfe3e8] bg-white font-semibold text-sm hover:bg-gray-50">Cancel</button>
+        <button onclick="confirmUnsub()" class="flex-1 h-11 rounded-lg bg-red-500 text-white font-bold text-sm hover:bg-red-600">Confirm</button>
       </div>
-      <button id="buyConfirmBtn" onclick="confirmBuy()" class="w-full h-11 bg-[#008060] text-white rounded-lg font-bold text-sm hover:bg-[#006e52] transition-colors">Complete Purchase</button>
     </div>
   </div>
 
@@ -395,7 +396,7 @@
     let carouselIndex = 0;
     let currentScale = 100;
     let currentView = 5;
-    let currentMode = localStorage.getItem(STORAGE_KEY + '_mode') || 'free';
+    // Paid mode is the only mode.
     let currentTab = 'advanced'; // advanced | master
     let editorTargetId = null;
     let buyTargetId = null;
@@ -416,8 +417,9 @@
     const view5Btn = document.getElementById('view5Btn');
     const recAppsTitle = document.getElementById('recAppsTitle');
     const featureRequestText = document.getElementById('featureRequestText');
-    const freeModeBtn = document.getElementById('freeModeBtn');
-    const paidModeBtn = document.getElementById('paidModeBtn');
+    const unsubModal = document.getElementById('unsubModal');
+    let unsubTargetId = null;
+    let pendingConfirmId = null;
     const buyModal = document.getElementById('buyModal');
     const masterView = document.getElementById('masterView');
     const scrollContainer = document.getElementById('scrollContainer');
@@ -441,7 +443,7 @@
       navMaster.classList.toggle('active', isMaster);
       navAdvanced.classList.toggle('active', !isMaster);
       // Hide header controls in master
-      document.getElementById('planWrap').classList.toggle('hidden', isMaster);
+      
       document.getElementById('viewWrap').classList.toggle('hidden', isMaster);
       document.getElementById('scaleWrap').classList.toggle('hidden', isMaster);
       document.getElementById('editWrap').classList.toggle('hidden', isMaster);
@@ -450,25 +452,17 @@
     navAdvanced.onclick = () => switchTab('advanced');
     navMaster.onclick = () => switchTab('master');
 
-    function setMode(mode) {
-      currentMode = mode;
-      localStorage.setItem(STORAGE_KEY + '_mode', mode);
-      freeModeBtn.classList.toggle('active', mode === 'free');
-      paidModeBtn.classList.toggle('active', mode === 'paid');
-      renderGrid();
-    }
-    freeModeBtn.onclick = () => setMode('free');
-    paidModeBtn.onclick = () => setMode('paid');
 
-    // Buy flow
+
+    // Subscribe flow
     function openBuyModal(id) {
       buyTargetId = id;
       const f = findById(id);
       if (!f) return;
-      document.getElementById('buyTitle').textContent = 'Purchase ' + f.title;
+      document.getElementById('buyTitle').textContent = 'Subscribe ' + f.title;
       document.getElementById('buyName').textContent = f.title;
       document.getElementById('buyPrice').innerHTML = '$' + (f.cost || 0) + '<span class="text-xs font-medium">/mo</span>';
-      document.getElementById('buyConfirmBtn').textContent = 'Complete Purchase — $' + (f.cost || 0) + '/mo';
+      document.getElementById('buyConfirmBtn').textContent = 'Proceed to Payment';
       buyModal.classList.remove('hidden');
       buyModal.classList.add('flex');
     }
@@ -482,13 +476,43 @@
         purchaseDates[buyTargetId] = Date.now();
         persistPurchased();
         localStorage.setItem(STORAGE_KEY + '_purchase_dates', JSON.stringify(purchaseDates));
-        const f = findById(buyTargetId);
-        if (f && currentMode !== 'paid') {
-          f.status = 'Enabled';
-          persistFeatures();
-        }
       }
       closeBuyModal();
+      renderGrid();
+    }
+
+
+    // Unsubscribe flow
+    function openUnsubModal(id) {
+      unsubTargetId = id;
+      const f = findById(id);
+      const expDate = purchaseDates[id]
+        ? new Date(purchaseDates[id] + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : null;
+      document.getElementById('unsubBody').textContent =
+        `Are you sure you want to unsubscribe from ${f ? f.title : 'this feature'}?` +
+        (expDate ? ` Your access is currently active until ${expDate}.` : '');
+      unsubModal.classList.remove('hidden');
+      unsubModal.classList.add('flex');
+    }
+    function closeUnsubModal() {
+      unsubModal.classList.add('hidden');
+      unsubModal.classList.remove('flex');
+      unsubTargetId = null;
+    }
+    function confirmUnsub() {
+      if (unsubTargetId != null) {
+        const id = String(unsubTargetId);
+        delete purchased[id];
+        delete purchaseDates[id];
+        delete activated[id];
+        const f = findById(id);
+        if (f) { f.status = 'Locked'; persistFeatures(); }
+        persistPurchased();
+        localStorage.setItem(STORAGE_KEY + '_purchase_dates', JSON.stringify(purchaseDates));
+        persistActivated();
+      }
+      closeUnsubModal();
       renderGrid();
     }
 
@@ -523,39 +547,80 @@
       messages.scrollTop = messages.scrollHeight;
     }
 
+    // Enable flow — triggered from "Click to Enable" on a free-type card.
+    // Requires user to type Yes/No in chat before we proceed.
     function activateFeature(id) {
       if (pendingActivation.has(String(id))) return;
+      if (pendingConfirmId) return; // one confirmation at a time
+      const f = findById(id);
+      if (!f) return;
+      pendingConfirmId = String(id);
+      document.getElementById('chat-window').classList.add('active');
+      sendBotMessage(`Please confirm with us you want to enable this ${f.title} by type Yes to proceed or No to cancel.`);
+    }
+
+    function proceedEnable(id) {
       const f = findById(id);
       if (!f) return;
       pendingActivation.add(String(id));
       renderGrid();
-      document.getElementById('chat-window').classList.add('active');
-      sendBotMessage(`Hi there! 👋 I'd be happy to enable ${f.title} for you.`);
+      sendBotMessage(`Great! Please give me a moment while I activate ${f.title} on your account... ⏳`);
       setTimeout(() => {
-        sendBotMessage(`Please give me a moment while I activate this feature on your account... ⏳`);
+        sendBotMessage(`Great news! ✅ ${f.title} has been successfully enabled!`);
         setTimeout(() => {
-          sendBotMessage(`Great news! ✅ ${f.title} has been successfully enabled!`);
+          sendBotMessage(`You can now use this feature immediately. Feel free to toggle it on/off anytime using the switch in the card. Enjoy! 🎉`);
           setTimeout(() => {
-            sendBotMessage(`You can now use this feature immediately. Feel free to toggle it on/off anytime using the switch in the card. Enjoy! 🎉`);
+            pendingActivation.delete(String(id));
+            f.status = 'Enabled';
+            activated[String(id)] = true;
+            persistFeatures();
+            persistActivated();
+            renderGrid();
             setTimeout(() => {
-              pendingActivation.delete(String(id));
-              f.status = 'Enabled';
-              activated[String(id)] = true;
-              persistFeatures();
-              persistActivated();
-              renderGrid();
-              const expDate = purchaseDates[String(id)]
-                ? new Date(purchaseDates[String(id)] + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                : null;
-              if (expDate) {
-                setTimeout(() => {
-                  sendBotMessage(`📅 Your ${f.title} subscription is active until ${expDate}. Remember to renew before that date to keep enjoying our feature!`);
-                }, 800);
-              }
-            }, 3000);
-          }, 1000);
-        }, 4000);
-      }, 1000);
+              sendBotMessage(`May I know if the app meet your expectation so far?`);
+            }, 800);
+          }, 2500);
+        }, 1000);
+      }, 2500);
+    }
+
+    function cancelEnable(id) {
+      const f = findById(id);
+      const name = f ? f.title : 'this feature';
+      sendBotMessage(`No problem! We won't enable ${name} for now. You can always come back and enable it whenever you're ready.`);
+      setTimeout(() => {
+        sendBotMessage(`May I know if the app meet your expectation so far?`);
+      }, 800);
+    }
+
+    function sendUserChatMessage(text) {
+      const messages = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = 'message message-sent';
+      div.textContent = text;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function handleChatSubmit() {
+      const input = document.getElementById('chat-input');
+      const text = (input.value || '').trim();
+      if (!text) return;
+      sendUserChatMessage(text);
+      input.value = '';
+      if (pendingConfirmId) {
+        const answer = text.toLowerCase();
+        const isYes = answer === 'yes' || answer === 'y';
+        const isNo  = answer === 'no'  || answer === 'n';
+        if (isYes || isNo) {
+          const id = pendingConfirmId;
+          pendingConfirmId = null;
+          setTimeout(() => {
+            if (isYes) proceedEnable(id);
+            else cancelEnable(id);
+          }, 400);
+        }
+      }
     }
 
     function handleFeatureToggle(id) {
@@ -610,11 +675,10 @@
     }
 
     function buildCardHtml(f, index, opts) {
-      const isPaidMode = currentMode === 'paid';
       const isPaidType = f.type === 'paid';
       const isEnabled = f.status.toLowerCase() === 'enabled' || f.status.toLowerCase() === 'live';
       const isBought = !!purchased[f.id];
-      const isActivated = isPaidMode && !!activated[f.id];
+      const isActivated = !!activated[f.id];
       const isPending = pendingActivation.has(String(f.id));
 
       const thumb = f.thumbnail || f.gif;
@@ -633,6 +697,7 @@
                 </div>
               </div>`;
 
+      // Show toggle switch once the feature has been enabled by the user.
       if (isActivated) {
         titleRow = `
           <div class="flex items-center gap-2 mb-2 w-full">
@@ -646,13 +711,9 @@
             </label>
           </div>`;
       } else {
-        const expiryDate = (!isPaidMode && isBought && purchaseDates[f.id])
-          ? new Date(purchaseDates[f.id] + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-          : null;
-        const priceHtml = isPaidType && f.cost && (!isPaidMode || !isBought)
+        const priceHtml = isPaidType && f.cost && !isBought
           ? `<div class="flex flex-col items-end shrink-0">
                <span class="text-[#008060] font-bold text-sm whitespace-nowrap">$${f.cost}/mo</span>
-               ${expiryDate ? `<span class="text-[10px] text-[#6d7175] whitespace-nowrap">Expires: ${expiryDate}</span>` : ''}
              </div>`
           : '';
         titleRow = `
@@ -665,75 +726,51 @@
           </div>`;
       }
 
-      // ── Buttons row ──
+      // ── Buttons row / meta ──
       let buttonsRow = '';
-      if (isPaidMode) {
-        if (!isActivated) {
-          if (isPaidType && !isBought) {
-            buttonsRow = `<button onclick="openBuyModal('${f.id}')" class="flex-1 h-8 rounded-lg bg-[#008060] text-white text-[10px] font-bold px-2 hover:bg-[#006e52] transition-all">Buy</button>`;
-          } else if (isPending) {
-            buttonsRow = `
-              <button disabled class="flex-1 h-8 rounded-lg bg-[#008060]/60 text-white text-[10px] font-bold px-2 cursor-not-allowed flex items-center justify-center gap-1.5">
-                <svg class="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
-                Enabling...
-              </button>`;
-          } else {
-            buttonsRow = `<button onclick="activateFeature('${f.id}')" class="flex-1 h-8 rounded-lg bg-[#008060] text-white text-[10px] font-bold px-2 hover:bg-[#006e52] transition-all">Click to Enable</button>`;
+      let metaRow = '';
+      const pendingBtn = `
+        <button disabled class="flex-1 h-8 rounded-lg bg-[#008060]/60 text-white text-[10px] font-bold px-2 cursor-not-allowed flex items-center justify-center gap-1.5">
+          <svg class="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+          Enabling...
+        </button>`;
+      const enableBtn = `<button onclick="activateFeature('${f.id}')" class="flex-1 h-8 rounded-lg bg-[#008060] text-white text-[10px] font-bold px-2 hover:bg-[#006e52] transition-all">Click to Enable</button>`;
+
+      if (isPaidType) {
+        if (!isBought) {
+          buttonsRow = `<button onclick="openBuyModal('${f.id}')" class="flex-1 h-8 rounded-lg bg-[#008060] text-white text-[10px] font-bold px-2 hover:bg-[#006e52] transition-all">Subscribe</button>`;
+        } else if (!isActivated) {
+          // Subscribed but not yet enabled — user still needs to run the chat enable flow.
+          buttonsRow = isPending ? pendingBtn : enableBtn;
+        } else {
+          // Subscribed AND enabled — show Unsubscribe + expiry below.
+          const expiryDate = purchaseDates[f.id]
+            ? new Date(purchaseDates[f.id] + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : null;
+          buttonsRow = `<button onclick="openUnsubModal('${f.id}')" class="flex-1 h-8 rounded-lg bg-[#6d7175] text-white text-[10px] font-bold px-2 hover:bg-[#4a4d50] transition-all">Unsubscribe</button>`;
+          if (expiryDate) {
+            metaRow = `<div class="text-center text-[10px] text-[#6d7175] mt-1">Expires: ${expiryDate}</div>`;
           }
         }
       } else {
-        // Free mode: original logic
-        const stylePremium = isPaidType;
-        const chatMsg = stylePremium
-          ? `Hi, I need help with ${f.title}`
-          : (isEnabled ? `Hi, I need help with ${f.title}` : `Hi, I want to unlock ${f.title}`);
-
-        if (stylePremium && !isBought) {
-          buttonsRow = `
-            <button onclick="openBuyModal('${f.id}')" class="flex-1 h-8 rounded-lg bg-[#008060] text-white text-[10px] font-bold px-2 hover:bg-[#006e52] transition-all">Buy</button>
-            <button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">Contact Us</button>
-          `;
-        } else if (stylePremium) {
-          const enableLabel = isEnabled ? 'Disable' : 'Enable';
-          const enableBg = isEnabled ? 'bg-[#6d7175] hover:bg-[#4a4d50]' : 'bg-[#008060] hover:bg-[#006e52]';
-          buttonsRow = `
-            <button onclick="togglePaidStatus('${f.id}')" class="flex-1 h-8 rounded-lg ${enableBg} text-white text-[10px] font-bold px-2 transition-all">${enableLabel}</button>
-            <button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">Contact Us</button>
-          `;
-        } else {
-          const contactText = isEnabled ? 'Still Need Help? Contact Us' : 'Contact Us';
-          buttonsRow = `<button onclick="openChatWith('${chatMsg.replace(/'/g, "\\'")}')" class="flex-1 h-8 rounded-lg bg-[#111213] text-white text-[10px] font-bold px-2 hover:bg-black transition-all truncate">${contactText}</button>`;
-        }
-        if (isEditing) {
-          buttonsRow += `<button onclick="removeCard(${index}); event.stopPropagation();" class="w-8 h-8 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>`;
+        // Free type
+        if (isPending) {
+          buttonsRow = pendingBtn;
+        } else if (!isActivated) {
+          buttonsRow = enableBtn;
         }
       }
 
-      // Available badge: paid mode, not yet activated
-      const availableBadge = (isPaidMode && !isActivated)
-        ? `<div class="absolute top-4 left-4 z-40 available-badge">Available</div>`
-        : '';
 
-      // Status badge: free mode, free-type cards only (Locked / Enabled)
-      let statusBadge = '';
-      if (!isPaidMode && !isPaidType) {
-        const badgeColor = !isEnabled
-          ? 'bg-[#fbeae5] text-[#8a2c0d] border-[#f1b8b8]'
-          : 'bg-[#e3f1df] text-[#0c5132] border-[#b7e0cf]';
-        statusBadge = `<div class="absolute top-4 right-4 z-40 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${badgeColor}" onclick="event.stopPropagation()">${f.status}</div>`;
+      if (isEditing) {
+        buttonsRow += `<button onclick="removeCard(${index}); event.stopPropagation();" class="w-8 h-8 rounded-lg border border-red-100 text-red-500 hover:bg-red-50 transition-colors"><i class="fas fa-trash-alt text-xs"></i></button>`;
       }
 
-      const statusLabel = isActivated
-        ? (isEnabled ? 'Enabled' : 'Disabled')
-        : (isEnabled ? 'Enabled' : 'Locked');
-      const paidActivatedExpiry = (isActivated && isPaidType && purchaseDates[f.id])
-        ? new Date(purchaseDates[f.id] + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        : null;
       return `
         <div class="relative h-3/4 bg-[#f8f9fa] ${isEditing ? 'cursor-default' : 'cursor-zoom-in'} overflow-hidden rounded-t-2xl"
              onmouseenter="showPreview(this, '${media}')"
              onmouseleave="hidePreview(this, '${staticImg}')"
-             onclick="${isEditing ? '' : `openModal('${media}', '${f.title}', '${statusLabel}')`}">
+             onclick="${isEditing ? '' : `openModal('${media}', '${f.title}')`}">
           ${!isEditing ? `
           <div class="expand-badge absolute top-1/2 left-1/2 z-30 bg-white/95 backdrop-blur-sm border border-[#dfe3e8] px-5 py-2.5 rounded-full shadow-2xl flex items-center gap-2 text-xs font-bold text-[#111213] whitespace-nowrap">
             <i class="fas fa-expand-alt text-sm"></i><span>Click to Expand</span>
@@ -744,16 +781,15 @@
             <span class="drop-shadow-md">Hover to preview</span>
           </div>
           <img data-src="${media}" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-300 z-20 opacity-0" alt="${f.title}">
-          ${availableBadge}
-          ${statusBadge}
         </div>
         <div class="h-1/4 p-4 relative flex flex-col justify-center bg-white rounded-b-2xl border-t border-[#f1f2f3]">
           ${titleRow}
-          ${paidActivatedExpiry ? `<div class="text-center text-[10px] text-[#6d7175] mt-auto">Expires: ${paidActivatedExpiry}</div>` : ''}
           ${buttonsRow ? `<div class="flex items-center gap-2">${buttonsRow}</div>` : ''}
+          ${metaRow}
         </div>
       `;
     }
+
 
     function renderGrid() {
       grid.innerHTML = '';
@@ -1057,20 +1093,13 @@
     }
     function removeCard(index) { features.splice(index, 1); persistFeatures(); renderGrid(); }
 
-    function openModal(gif, title, status) {
+    function openModal(gif, title) {
       modalImg.src = gif;
-      const isEnabled = ['enabled','live'].includes(status.toLowerCase());
-      modalHeader.innerHTML = `
-        <div class="flex items-center gap-3">
-          <span>${title}</span>
-          <span class="px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${isEnabled ? 'bg-[#e3f1df] text-[#0c5132] border-[#b7e0cf]' : 'bg-[#fbeae5] text-[#8a2c0d] border-[#f1b8b8]'}">
-            ${status}
-          </span>
-        </div>
-      `;
+      modalHeader.innerHTML = `<span>${title}</span>`;
       previewModal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     }
+
 
     function toggleTooltip(el) {
       if (!isEditing) return;
@@ -1118,7 +1147,7 @@
 
     addCardBtn.onclick = () => openFeatureEditor(null);
 
-    setMode(currentMode);
+    renderGrid();
     renderApps();
 
     scaleInput.addEventListener('blur', () => {
@@ -1127,7 +1156,7 @@
       renderGrid();
     });
 
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeBuyModal(); closeFeatureEditor(); } });
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeBuyModal(); closeUnsubModal(); closeFeatureEditor(); } });
   </script>
 </body>
 </html>
