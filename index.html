@@ -349,7 +349,7 @@
       { id: 4, title: 'Local Currency Adaption', desc: 'Show product and filter prices in the shopper\'s local currency instead of only the default currency set in your store.', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iDzgyb5736rjvdGdFb/giphy.gif' },
       { id: 5, title: 'Image Swatches Filter', desc: 'Display product images instead of plain color or text swatches. Let shoppers preview and select different patterns, designs, or styles visually for a better shopping experience.', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExcDN4OWRobnhvbGRuejh3M2NqaGYzd2JtNWN4NzZ1d3Eybmx4ZDg3dCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/3o7TKMGpxvF7657904/giphy.gif' },
       { id: 6, title: 'Multi-Filters by One Source', desc: 'Reuse a single source, such as Tags, Type, Category or Vendor, etc... multiple times in one filter set (based on your needs)', status: 'Locked', gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHJleW1pOHZ1MTR1ZHJkNjVnNmpnbnZhcWlneWxsaHVpNXpwNnc4ZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26uf7O0I7YmYgN528/giphy.gif' },
-      { id: 'sample-ymm', title: 'Year Make Model', desc: 'Let shoppers filter parts and products by their vehicle year, make, and model — a must-have for automotive stores.', status: 'Locked', gif: 'https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif', type: 'paid', cost: 10 }
+      { id: 'sample-ymm', title: 'Year Make Model', desc: 'Let shoppers filter parts and products by their vehicle year, make, and model - a must-have for automotive stores.', status: 'Locked', gif: 'https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif', type: 'paid', cost: 10 }
     ];
 
     const recommendedApps = [
@@ -384,6 +384,7 @@
     let features = migrate(JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultFeatures);
     let appsData = JSON.parse(localStorage.getItem(STORAGE_KEY + '_apps')) || recommendedApps;
     let purchased = JSON.parse(localStorage.getItem(STORAGE_KEY + '_purchased') || '{}');
+    let purchaseDates = JSON.parse(localStorage.getItem(STORAGE_KEY + '_purchase_dates') || '{}');
     let isEditing = false;
     let carouselIndex = 0;
     let currentScale = 100;
@@ -471,7 +472,9 @@
     function confirmBuy() {
       if (buyTargetId != null) {
         purchased[buyTargetId] = true;
+        purchaseDates[buyTargetId] = Date.now();
         persistPurchased();
+        localStorage.setItem(STORAGE_KEY + '_purchase_dates', JSON.stringify(purchaseDates));
         const f = findById(buyTargetId);
         if (f) f.status = 'Enabled';
         persistFeatures();
@@ -485,6 +488,14 @@
       if (!f) return;
       f.status = f.status.toLowerCase() === 'enabled' ? 'Locked' : 'Enabled';
       persistFeatures();
+      toggleCounts[id] = (toggleCounts[id] || 0) + 1;
+      if (toggleCounts[id] >= 3) {
+        toggleCounts[id] = 0;
+        setTimeout(() => {
+          document.getElementById('chat-window').classList.add('active');
+          sendBotMessage(`Hey! Looks like you've been toggling ${f.title} a few times — need a hand? I'm happy to help you get the most out of it 😊`);
+        }, 400);
+      }
       renderGrid();
     }
     function toggleCardStatus(index) {
@@ -540,7 +551,7 @@
         toggleCounts[id] = 0;
         setTimeout(() => {
           document.getElementById('chat-window').classList.add('active');
-          sendBotMessage(`Hey! Looks like you've been toggling ${f.title} a few times — need a hand? I'm happy to help you get the most out of it 😊`);
+          sendBotMessage(`Hey! Looks like you've been toggling ${f.title} a few times - need a hand? I'm happy to help you get the most out of it 😊`);
         }, 400);
       }
       renderGrid();
@@ -595,17 +606,22 @@
 
       // ── Title row ──
       let titleRow;
+      const tooltipHtml = `
+              <div class="relative group/tooltip inline-block shrink-0">
+                <i class="far fa-question-circle text-[#6d7175] text-xs cursor-help p-1 transition-colors hover:text-[#008060]"
+                   onclick="${isEditing ? 'toggleTooltip(this)' : ''}"></i>
+                <div class="tooltip-box bg-[#111213] text-white text-[11px] p-4 rounded-xl shadow-2xl leading-relaxed border border-white/10">
+                  <div contenteditable="${isEditing}" onblur="updateField(${index}, 'desc', this.innerText)">${f.desc}</div>
+                  <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#111213] rotate-45"></div>
+                </div>
+              </div>`;
+
       if (isActivated) {
         titleRow = `
           <div class="flex items-center gap-2 mb-2 w-full">
-            <h3 class="font-bold text-sm text-[#111213] truncate flex-1" contenteditable="${isEditing}" onblur="updateField(${index}, 'title', this.innerText)">${f.title}</h3>
-            <div class="relative group/tooltip inline-block shrink-0">
-              <i class="far fa-question-circle text-[#6d7175] text-xs cursor-help p-1 transition-colors hover:text-[#008060]"
-                 onclick="${isEditing ? 'toggleTooltip(this)' : ''}"></i>
-              <div class="tooltip-box bg-[#111213] text-white text-[11px] p-4 rounded-xl shadow-2xl leading-relaxed border border-white/10">
-                <div contenteditable="${isEditing}" onblur="updateField(${index}, 'desc', this.innerText)">${f.desc}</div>
-                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#111213] rotate-45"></div>
-              </div>
+            <div class="flex items-center gap-1 flex-1 min-w-0">
+              <h3 class="font-bold text-sm text-[#111213] truncate min-w-0" contenteditable="${isEditing}" onblur="updateField(${index}, 'title', this.innerText)">${f.title}</h3>
+              ${tooltipHtml}
             </div>
             <label class="switch shrink-0" onclick="event.stopPropagation()">
               <input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="handleFeatureToggle('${f.id}')">
@@ -613,19 +629,20 @@
             </label>
           </div>`;
       } else {
+        const expiryDate = (isBought && purchaseDates[f.id])
+          ? new Date(purchaseDates[f.id] + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : null;
         const priceHtml = !isPaidMode && isPaidType && f.cost
-          ? `<span class="text-[#008060] font-bold text-sm whitespace-nowrap">$${f.cost}/mo</span>`
+          ? `<div class="flex flex-col items-end shrink-0">
+               <span class="text-[#008060] font-bold text-sm whitespace-nowrap">$${f.cost}/mo</span>
+               ${expiryDate ? `<span class="text-[10px] text-[#6d7175] whitespace-nowrap">Expires: ${expiryDate}</span>` : ''}
+             </div>`
           : '';
         titleRow = `
           <div class="flex items-center gap-2 mb-2 w-full">
-            <h3 class="font-bold text-sm text-[#111213] truncate flex-1" contenteditable="${isEditing}" onblur="updateField(${index}, 'title', this.innerText)">${f.title}</h3>
-            <div class="relative group/tooltip inline-block shrink-0">
-              <i class="far fa-question-circle text-[#6d7175] text-xs cursor-help p-1 transition-colors hover:text-[#008060]"
-                 onclick="${isEditing ? 'toggleTooltip(this)' : ''}"></i>
-              <div class="tooltip-box bg-[#111213] text-white text-[11px] p-4 rounded-xl shadow-2xl leading-relaxed border border-white/10">
-                <div contenteditable="${isEditing}" onblur="updateField(${index}, 'desc', this.innerText)">${f.desc}</div>
-                <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#111213] rotate-45"></div>
-              </div>
+            <div class="flex items-center gap-1 flex-1 min-w-0">
+              <h3 class="font-bold text-sm text-[#111213] truncate min-w-0" contenteditable="${isEditing}" onblur="updateField(${index}, 'title', this.innerText)">${f.title}</h3>
+              ${tooltipHtml}
             </div>
             ${priceHtml}
           </div>`;
@@ -687,7 +704,9 @@
         statusBadge = `<div class="absolute top-4 right-4 z-40 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${badgeColor}" onclick="event.stopPropagation()">${f.status}</div>`;
       }
 
-      const statusLabel = isEnabled ? 'Enabled' : 'Locked';
+      const statusLabel = (isPaidMode && isActivated)
+        ? (isEnabled ? 'Enabled' : 'Disabled')
+        : (isEnabled ? 'Enabled' : 'Locked');
       return `
         <div class="relative h-3/4 bg-[#f8f9fa] ${isEditing ? 'cursor-default' : 'cursor-zoom-in'} overflow-hidden rounded-t-2xl"
              onmouseenter="showPreview(this, '${media}')"
